@@ -252,7 +252,7 @@ def train(task, model, nbatch=50, num_steps=400000,
     fast_db_index = tf.placeholder(tf.int32, [], name="fast_db_index")
 
     def answer_if_simple_py(fast_db_index, Qs):
-        fast_dbs = fast_db_communicator[fast_db_index]       
+        fast_dbs = fast_db_communicator[fast_db_index]
         As = np.zeros(Qs.shape[:-1] + (task.answer_length,), np.int32)
         are_simple = np.zeros(Qs.shape[:-1], np.bool)
         for i, fast_db in enumerate(fast_dbs):
@@ -293,7 +293,7 @@ def train(task, model, nbatch=50, num_steps=400000,
                 return np.zeros(batch["Qs"].shape[:2] +
                             (task.interaction_length, task.question_length), dtype=np.int32)
             def subAs(batch):
-                return np.zeros(batch["Qs"].shape[:2] + 
+                return np.zeros(batch["Qs"].shape[:2] +
                             (task.interaction_length, task.answer_length), dtype=np.int32)
             def loss(batch): return 0.17
             def train(batch): return None
@@ -335,7 +335,11 @@ def train(task, model, nbatch=50, num_steps=400000,
     if not stub:
         ops = model.build(**placeholders, simple_answerer=answer_if_simple_tf)
         sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
+        # from tensorflow.python import debug as tf_debug
+        # sess = tf_debug.LocalCLIDebugWrapperSession(sess)
         model.initialize(sess)
+        # writer = tf.summary.FileWriter(logdir=path, graph=sess.graph)
+        # writer.flush()
         sess.graph.finalize()
 
     targets = [
