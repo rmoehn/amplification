@@ -6,7 +6,12 @@ from amplification.models.core import flatten_first, flatten_to
 
 
 class AttentionAnswerer(AttentionModel):
-    def build(self, facts, Qs, targets, is_training=tf.constant(True)):
+    def build(self,
+              facts,
+              Qs,
+              targets,
+              is_training=tf.constant(True),
+              learning_rate=1e-5):
         state = self.run(facts, is_training)
         As, losses = self.answer(
             state, facts, Qs, is_training=is_training, targets=targets)
@@ -18,7 +23,7 @@ class AttentionAnswerer(AttentionModel):
                 self.context,
                 clip_grads=1.0,
                 context=self.context["train"],
-                optimizer_args=dict(learning_rate=1e-4, beta2=0.98))
+                optimizer_args=dict(learning_rate=learning_rate, beta2=0.98))
 
         train_op = tf.cond(is_training, make_train, lambda: tf.no_op())
         return {"loss": loss, "train": train_op, "As": As, 'losses': losses}
@@ -28,9 +33,11 @@ class AnswererWithTarget(tf_utils.Model):
     def set_params(self,
                    ema_horizon=1000,
                    model_class=AttentionAnswerer,
+                   learning_rate=1e-5,
                    **kwargs):
         self.student = model_class(context=self.context["student"], **kwargs)
         self.teacher = model_class(context=self.context["teacher"], **kwargs)
+        self.learning_rate = learning_rate
         self.horizon = ema_horizon
 
     def student_device(self):
@@ -52,10 +59,18 @@ class AnswererWithTarget(tf_utils.Model):
     def build(self, facts, Qs, targets, is_training=tf.constant(True)):
         with self.student_device():
             student_ops = self.student.build(
-                facts, Qs, targets, is_training=is_training)
+                facts,
+                Qs,
+                targets,
+                is_training=is_training,
+                learning_rate=self.learning_rate)
         with self.teacher_device():
             teacher_ops = self.teacher.build(
-                facts, Qs, targets, is_training=tf.constant(False))
+                facts,
+                Qs,
+                targets,
+                is_training=tf.constant(False),
+                learning_rate=self.learning_rate)
         ops = {"student": student_ops, "teacher": teacher_ops}
         with tf.control_dependencies([student_ops["train"]]):
             update_ema = self.update_ema_op()

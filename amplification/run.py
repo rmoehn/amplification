@@ -74,10 +74,11 @@ def main_cmd():
             'train.num_steps', 'train.asker_data_limit',
             'train.adjust_drift_epsilon', 'train.initial_drift_epsilon',
             'train.stub', 'train.just_asker', 'train.supervised',
-            'train.learn_human_model', 'model.joint.depth',
-            'model.answerer.depth', 'model.asker.depth', 'model.joint.nh',
-            'model.asker.nh', 'model.answerer.nh',
-            'model.joint.universal_transformer', 'tiny'
+            'train.learn_human_model', 'train.warmup_time',
+            'model.joint.depth', 'model.answerer.depth', 'model.asker.depth',
+            'model.joint.nh', 'model.asker.nh', 'model.answerer.nh',
+            'model.joint.universal_transformer', 'model.joint.learning_rate',
+            'tiny'
     ]:
         parser.add_argument('--{}'.format(c))
     n = parser.parse_args()
@@ -86,10 +87,14 @@ def main_cmd():
         try:
             v = int(v)
         except ValueError:
-            pass
+            try:
+                v = float(v)
+            except ValueError:
+                pass
         if v in ['none', 'None']: v = None
         if v in ['true', 't', 'T', 'True']: v = True
         if v in ['false', 'f', 'F', 'False']: v = False
+        print(k, v)
         user_args[k] = v
     kwargs = parse_args(user_args)
     print(kwargs)

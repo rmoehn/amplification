@@ -6,9 +6,11 @@ from tensorflow.python.util import compat
 from tensorflow.core.util import event_pb2
 import time
 
+
 def ensure_dir(dirname):
     if not os.path.exists(dirname):
         os.makedirs(dirname)
+
 
 class Logger(object):
     @staticmethod
@@ -25,6 +27,7 @@ class Logger(object):
             self.step = 1
             prefix = 'events'
             path = os.path.join(os.path.abspath(log_path), prefix)
+            print("events_path: ", path)
             ensure_dir(path)
             self.writer = pywrap_tensorflow.EventsWriter(compat.as_bytes(path))
 
@@ -35,8 +38,10 @@ class Logger(object):
                 kwargs = {'tag': k, 'simple_value': float(v)}
                 return tf.Summary.Value(**kwargs)
 
-            summary = tf.Summary(value=[summary_val(k, v) for k, v in kvs if
-                                        isinstance(v, float) or isinstance(v, int)])
+            summary = tf.Summary(value=[
+                summary_val(k, v) for k, v in kvs
+                if isinstance(v, float) or isinstance(v, int)
+            ])
             event = event_pb2.Event(wall_time=time.time(), summary=summary)
             event.step = self.step  # is there any reason why you'd want to specify the step?
             self.writer.WriteEvent(event)
@@ -67,4 +72,3 @@ class Logger(object):
                 raise NotImplementedError
         print('=' * 40)
         print()
-

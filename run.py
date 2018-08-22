@@ -27,22 +27,3 @@ print(os.getcwd(), cmd)
 cmd_str = "export PYTHONPATH=\"${PYTHONPATH}:" + os.getcwd(
 ) + "\"; python {} ".format(" ".join(cmd))
 subprocess.run(cmd_str, shell=True)
-
-# parser = argparse.ArgumentParser()
-# parser.add_argument('--test', action="store_true")
-# parser.add_argument('--hparams', default="", type=str)
-# parser.add_argument('--project_name', type=str, default="")
-# parser.add_argument('--out_dir', type=str, default=os.getcwd())
-# parser.add_argument('rest', nargs=argparse.REMAINDER)
-# args = parser.parse_args()
-
-# if args.test:
-#     exit(0)
-# print(args)
-# cmd = [
-#     "amplification/run.py", "task.name", args.project_name, "train.path",
-#     args.out_dir
-# ] + args.rest
-# cmd_str = "python {} ".format(" ".join(cmd))
-# print(cmd_str)
-# # subprocess.run(cmd_str, shell=True)

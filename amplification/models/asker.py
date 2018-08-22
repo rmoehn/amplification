@@ -28,7 +28,8 @@ class AttentionSequenceModel(tf_utils.Model):
                    nheads=4,
                    depth=4,
                    p_drop=0.1,
-                   universal_transformer=False):
+                   universal_transformer=False,
+                   learning_rate=1e-5):
         self.nvocab = task.nvocab
         self.max_length = task.transcript_length
         self.nheads = nheads
@@ -37,6 +38,7 @@ class AttentionSequenceModel(tf_utils.Model):
         self.depth = depth
         self.alength = task.answer_length
         self.universal_transformer = universal_transformer
+        self.learning_rate = learning_rate
 
     def encode(self,
                ws,
@@ -241,7 +243,7 @@ class AttentionSequenceModel(tf_utils.Model):
             self.context,
             clip_grads=1.0,
             context=self.context["train"],
-            optimizer_args=dict(learning_rate=1e-5, beta2=0.98))
+            optimizer_args=dict(learning_rate=self.learning_rate, beta2=0.98))
         return {"losses": losses, "loss": loss, "train": train_op}
 
 

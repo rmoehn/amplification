@@ -72,11 +72,14 @@ def print_batch(task, Qs, subQs, subAs, As, facts, fast_dbs, **other_As):
             for k, v in sorted(other_As.items()):
                 print("{}: {}".format(k, task.repr_answer(v[0,i])))
 
-def log_accuracy(task, Qs, ground_truth, fast_dbs, stats_averager, **As_by_name):
+def log_accuracy(task, Qs, ground_truth, fast_dbs, stats_averager, stepper, **As_by_name):
     classification = np.asarray([[task.classify_question(Q, fast_db) for Q in Q_list]
                                  for fast_db, Q_list in zip(fast_dbs, Qs)])
     total = np.size(classification)
     with print_lock:
+        print()
+        for s in ["answerer_gen", "answerer_train"]:            
+            print(s, stepper[s])
         for name, As in As_by_name.items():
             accuracies = np.all(As == ground_truth, axis=-1)
             correct = np.sum(accuracies)
@@ -106,7 +109,7 @@ def generate_answerer_data(run, task, get_batch, answerer_buffer, stats_averager
             np.any(teacher_As != idk, axis=-1),
             np.all(teacher_As == As, axis=-1)
         ))
-        log_accuracy(task, Qs, ground_truth, fast_dbs, stats_averager,
+        log_accuracy(task, Qs, ground_truth, fast_dbs, stats_averager, stepper,
                 teacher=teacher_As, targets=As)
         print_batch(task, Qs, subQs, subAs, As, facts, fast_dbs,
                     teacher=teacher_As, truth=ground_truth)
@@ -135,16 +138,25 @@ def make_validation_buffer(task, instances=1000, nqs=50, min_difficulty=0, max_d
         result.extend(batch, extendible={x:[1] for x in result.keys()})
     return result
 
-def train_answerer(run, answerer_buffer, stats_averager, make_log, stepper, nbatch, task):
+def train_answerer(run, answerer_buffer, stats_averager, make_log, stepper, nbatch, task, warmup_time=0):
     validation_buffer = make_validation_buffer(task)
     while not answerer_buffer.has(10*nbatch):
         time.sleep(0.1)
     while True:
         batch = answerer_buffer.sample(nbatch)
-        _, loss, As = run(["answerer/train",
-                           "answerer/student/loss",
-                           "answerer/student/As"],
-                          batch, is_training=True)
+        if stepper["answerer_train"] < warmup_time:
+            loss, As = run(["answerer/student/loss",
+                            "answerer/student/As"],
+                            batch, is_training=True)
+        else:
+            _, loss, As = run(
+                [
+                    "answerer/train", "answerer/student/loss",
+                    "answerer/student/As"
+                ],
+                batch,
+                is_training=True)
+
         accuracy = get_accuracy(As, batch["truth"])
         stats_averager.add("accuracy/train", accuracy)
         stats_averager.add("loss/answerer", loss)
@@ -218,7 +230,7 @@ def train(task, model, nbatch=50, num_steps=400000,
         path=None,
         stub=False, learn_human_model=True, supervised=False, curriculum=True,
         generation_frequency=10, log_frequency=10,
-        buffer_size=10000, asker_data_limit=100000, loss_threshold=0.3):
+        buffer_size=10000, asker_data_limit=100000, loss_threshold=0.3, warmup_time=0):
     if supervised: learn_human_model = False
     if not stub:
         placeholders = {
@@ -334,7 +346,10 @@ def train(task, model, nbatch=50, num_steps=400000,
 
     if not stub:
         ops = model.build(**placeholders, simple_answerer=answer_if_simple_tf)
-        sess = tf.Session(config=tf.ConfigProto(allow_soft_placement=True))
+        config = tf.ConfigProto()
+        config.allow_soft_placement = True
+        # config.gpu_options.allow_growth = True
+        sess = tf.Session(config=config)
         # from tensorflow.python import debug as tf_debug
         # sess = tf_debug.LocalCLIDebugWrapperSession(sess)
         model.initialize(sess)
@@ -344,7 +359,7 @@ def train(task, model, nbatch=50, num_steps=400000,
 
     targets = [
         dict(target=train_answerer,
-             args=(run, answerer_buffer, stats_averager, make_log, stepper, nbatch, task)),
+             args=(run, answerer_buffer, stats_averager, make_log, stepper, nbatch, task, warmup_time)),
         dict(target=train_asker,
              args=(run, asker_buffer, stats_averager, stepper, nbatch)),
         dict(target=generate_answerer_data,
