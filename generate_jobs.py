@@ -1,5 +1,7 @@
-for supervised in [False, True]:
-    for universal in [True, False]:
+environment = "tslurm"
+exclude = "guppy22,dgx1"
+for supervised in [False]:  #[False, True]:
+    for universal in [True]:  #[False, True]:
         if universal:
             learning_rates = ["1e-4"]
         else:
@@ -10,26 +12,22 @@ for supervised in [False, True]:
                             ("_supervised"
                              if supervised else "") + ("_" + learning_rate
                                                        if universal else ""))
-                cmd = ["sbatch --partition gpu --time=00-10:00:00"]
-                cmd += ["-x guppy4,guppy5,guppy6,guppy7,guppy10"]
+                cmd = []
+                cmd += ["python ~/code/veclib/scripts/exp.py"]
+                cmd += ["--async"]
+                if exclude:
+                    cmd += ["--exclude " + exclude]
                 if supervised:
-                    cmd += ["--gres=gpu:1 --cpus-per-task=4"]
+                    cmd += ["--n_gpus 1"]
                 else:
-                    cmd += ["--gres=gpu:2 --cpus-per-task=8"]
-                cmd += ["--job-name " + job_name]
-                cmd += ["exp.slurm"]
-                cmd += [job_name]
-                if supervised:
-                    cmd += ["1"]
-                else:
-                    cmd += ["2"]
-                # cmd = [
-                #     "python ~/code/veclib/exp.py", job_name, "amplification",
-                #     "bluebird"
-                # ]
-                # cmd += ["amplification/run.py"]
+                    cmd += ["--n_gpus 2"]
+                cmd += [
+                    job_name, "amplification", environment,
+                    "amplification/run.py"
+                ]
                 cmd += ["--task.name " + task]
                 cmd += ["--train.num_steps 100000"]
+                # cmd += ["--train.warmup_time 20"]
                 if universal:
                     cmd += ["--model.joint.universal_transformer t"]
                     cmd += ["--model.joint.learning_rate " + learning_rate]
