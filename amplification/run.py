@@ -42,6 +42,8 @@ def make_task(name="sum", tiny=False, **kwargs):
         return tasks.GraphTask(**kwargs)
     if name in ["iterate", "iter"]:
         return tasks.IterTask(**kwargs)
+    if name in ["sat"]:
+        return tasks.SatTask(**kwargs)
     else:
         raise ValueError(name)
 

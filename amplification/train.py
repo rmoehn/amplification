@@ -348,13 +348,10 @@ def train(task, model, nbatch=50, num_steps=400000,
         ops = model.build(**placeholders, simple_answerer=answer_if_simple_tf)
         config = tf.ConfigProto()
         config.allow_soft_placement = True
-        # config.gpu_options.allow_growth = True
         sess = tf.Session(config=config)
         # from tensorflow.python import debug as tf_debug
         # sess = tf_debug.LocalCLIDebugWrapperSession(sess)
         model.initialize(sess)
-        # writer = tf.summary.FileWriter(logdir=path, graph=sess.graph)
-        # writer.flush()
         sess.graph.finalize()
 
     targets = [
