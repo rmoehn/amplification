@@ -16,7 +16,7 @@ from collections import defaultdict
 
 import numpy as np
 
-from core import idk, uniform, Task, sequences, test_task, recursive_run
+from amplification.tasks.core import idk, uniform, Task, sequences, test_task, recursive_run
 
 
 def matches(patterns, xs):
@@ -65,10 +65,11 @@ class SatTask(Task):
 
         raise ValueError(x)
 
-    def __init__(self, length=3, size=float('inf'), nvars=6, nvalues=2):
+    def __init__(self, length=3, nvars=6, nvalues=2, min_clauses=8, size=float('inf')):
         self.nvocab = self.fixed_vocab
         self.nvars = nvars
         self.nvalues = nvalues
+        self.min_clauses = min_clauses
         self.size = min(size, nvars**length * nvalues**length)
         # Allocate space for variable names
         self.variable_names = self.allocate(nvars)
@@ -89,6 +90,7 @@ class SatTask(Task):
             np.array(x) for x in alternating_sequences(
                 self.variable_names, self.variable_values, length)
         ]
+        # Number of variables per clause
         self.length = length
         self.question_length = nvars
         self.fact_length = length * 2
@@ -116,7 +118,7 @@ class SatTask(Task):
         return assignments
 
     def make_dbs(self, difficulty=float('inf')):
-        num_clauses = min(self.size, difficulty + 8)
+        num_clauses = min(self.size, difficulty + self.min_clauses)
         strings = np.stack(random.sample(self.all_clauses, num_clauses))
         assignments = np.array(self.satisfying_assignments(strings))
         fast_db = {"strings": strings, "assignments": assignments}
@@ -174,6 +176,22 @@ class SatTask(Task):
 
 
 if __name__ == "__main__":
+    task = SatTask()
+    instances=1000
+    nqs=50
+    min_difficulty=0
+    max_difficulty=10
+    difficulty_counts = [1] + ([1/(max_difficulty - min_difficulty)] * (max_difficulty - min_difficulty - 1)) + [1]
+    difficulty_sum = sum(difficulty_counts)
+    difficulty_counts = [int(d * instances / difficulty_sum) for d in difficulty_counts]
+    for i, n in enumerate(difficulty_counts):
+        difficulty = i + min_difficulty
+        facts, fast_dbs, Qs, ground_truth = task.get_batch(n, nqs=nqs, difficulty=difficulty)
+        print(ground_truth.shape)
+        print(i, task.repr_answer(ground_truth[0]))
+    exit(0)
+
+
     # print(alternating_sequences([1, 2], ['a', 'b'], 3))
     task = SatTask(size=2, nvars=2, length=2)
     a = task.variable_names[0]
@@ -244,7 +262,7 @@ if __name__ == "__main__":
     for k in sorted(d.keys()):
         print (k, d[k])
 
-        
+
     nbatch = 10
     nqs = 300
     import time

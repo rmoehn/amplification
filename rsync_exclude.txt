@@ -3,3 +3,4 @@
 logs
 sat_test
 out
+__pycache__

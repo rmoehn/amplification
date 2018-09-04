@@ -12,6 +12,8 @@ from amplification.tasks.core import idk, print_interaction, recursive_run
 from amplification.buffer import Buffer
 from amplification.logger import Logger
 
+from tensorflow.contrib.memory_stats.python.ops.memory_stats_ops import BytesInUse, MaxBytesInUse, BytesLimit
+
 print_lock = threading.Lock()
 
 def multi_access(d, ks):
@@ -78,7 +80,7 @@ def log_accuracy(task, Qs, ground_truth, fast_dbs, stats_averager, stepper, **As
     total = np.size(classification)
     with print_lock:
         print()
-        for s in ["answerer_gen", "answerer_train"]:            
+        for s in ["answerer_gen", "answerer_train"]:
             print(s, stepper[s])
         for name, As in As_by_name.items():
             accuracies = np.all(As == ground_truth, axis=-1)
@@ -348,11 +350,21 @@ def train(task, model, nbatch=50, num_steps=400000,
         ops = model.build(**placeholders, simple_answerer=answer_if_simple_tf)
         config = tf.ConfigProto()
         config.allow_soft_placement = True
+        
+        with tf.device('/gpu:0'):
+            max_bytes_in_use_0 = MaxBytesInUse()
+            bytes_limit_0 = BytesLimit()
+        if not supervised:            
+            with tf.device('/gpu:1'):
+                max_bytes_in_use_1 = MaxBytesInUse()
+                bytes_limit_1 = BytesLimit()
+
         sess = tf.Session(config=config)
         # from tensorflow.python import debug as tf_debug
         # sess = tf_debug.LocalCLIDebugWrapperSession(sess)
         model.initialize(sess)
         sess.graph.finalize()
+
 
     targets = [
         dict(target=train_answerer,
@@ -376,4 +388,10 @@ def train(task, model, nbatch=50, num_steps=400000,
     while True:
         time.sleep(10)
         if stepper["answerer_train"] >= num_steps:
+            with print_lock:
+                print("max_bytes_in_use_0", sess.run(max_bytes_in_use_0))
+                print("bytes_limit_0", sess.run(bytes_limit_0))
+                if not supervised:
+                    print("max_bytes_in_use_1", sess.run(max_bytes_in_use_1))
+                    print("bytes_limit_1", sess.run(bytes_limit_1))
             return
