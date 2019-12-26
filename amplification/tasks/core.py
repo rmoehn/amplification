@@ -159,8 +159,11 @@ def test_task(task, nbatch=10, nqs=300):
     for fast_db in fast_dbs:
         answerer = lambda Qs: task.answers(Qs, fast_db)
         Qs = task.make_qs(nqs, fast_db)
+
         for Q in Qs:
+            # Apparently just make sure that the call doesn't cause an exception.
             task.classify_question(Q, fast_db)
+
         direct_A = task.answers(Qs, fast_db)
         recursive_A, subQs, subAs = recursive_run(task, Qs, answerer)
         assert np.all(direct_A == recursive_A)
