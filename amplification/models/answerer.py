@@ -41,10 +41,12 @@ class AnswererWithTarget(tf_utils.Model):
         self.horizon = ema_horizon
 
     def student_device(self):
-        return tf.device("/device:GPU:1")
+        return tf.device("/device:GPU:1" if tf.test.is_gpu_available()
+                         else "/device:CPU:0")
 
     def teacher_device(self):
-        return tf.device("/device:GPU:0")
+        return tf.device("/device:GPU:0" if tf.test.is_gpu_available()
+                         else "/device:CPU:0")
 
     def update_ema_op(self):
         context = self.context["ema"]

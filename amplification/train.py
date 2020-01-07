@@ -349,18 +349,21 @@ def train(task, model, nbatch=50, num_steps=400000,
         with print_lock:
             logger.log(log)
 
+    memory_usage = {}
+    sess = None
     if not stub:
         ops = model.build(**placeholders, simple_answerer=answer_if_simple_tf)
         config = tf.ConfigProto()
         config.allow_soft_placement = True
-        
-        with tf.device('/gpu:0'):
-            max_bytes_in_use_0 = MaxBytesInUse()
-            bytes_limit_0 = BytesLimit()
-        if not supervised:            
-            with tf.device('/gpu:1'):
-                max_bytes_in_use_1 = MaxBytesInUse()
-                bytes_limit_1 = BytesLimit()
+
+        if tf.test.is_gpu_available():
+            with tf.device('/gpu:0'):
+                memory_usage['max_bytes_in_use_0'] = MaxBytesInUse()
+                memory_usage['bytes_limit_0'] = BytesLimit()
+            if not supervised:
+                with tf.device('/gpu:1'):
+                    memory_usage['max_bytes_in_use_1'] = MaxBytesInUse()
+                    memory_usage['bytes_limit_1'] = BytesLimit()
 
         sess = tf.Session(config=config)
         # from tensorflow.python import debug as tf_debug
@@ -391,10 +394,8 @@ def train(task, model, nbatch=50, num_steps=400000,
     while True:
         time.sleep(10)
         if stepper["answerer_train"] >= num_steps:
-            with print_lock:
-                print("max_bytes_in_use_0", sess.run(max_bytes_in_use_0))
-                print("bytes_limit_0", sess.run(bytes_limit_0))
-                if not supervised:
-                    print("max_bytes_in_use_1", sess.run(max_bytes_in_use_1))
-                    print("bytes_limit_1", sess.run(bytes_limit_1))
+            if memory_usage:
+                with print_lock:
+                    for name, op in memory_usage.items():
+                        print(name, sess.run(op))
             return

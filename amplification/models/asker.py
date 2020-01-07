@@ -270,7 +270,8 @@ class AskerAndAnswerer(tf_utils.Model):
             **answerer_args, context=self.context["answerer"])
 
     def asker_device(self):
-        return tf.device("/device:GPU:0")
+        return tf.device("/device:GPU:0" if tf.test.is_gpu_available()
+                         else "/device:CPU:0")
 
     def build(self, facts, Qs, targets, transcripts, token_types, is_training,
               simple_answerer):
