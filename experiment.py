@@ -1,6 +1,25 @@
 from amplification.run import run, main, parse_args
 import argparse
 
+# The following description is incomplete.
+#
+# An experiment consists of a list of configurations.
+#
+# A configuration is a tuple of triples. A triple consists of
+# (configuration key, configuration value, descriptor). The descriptor gives
+# this part of the configuration a speaking name within an experiment.
+#
+# ``combos`` generates an experiment. It returns configurations based on the
+# cartesian product of all the ``options`` among its arguments and adds to each
+# of the cartesian product's elements the triples returned by the ``bind``s
+# among its arguments.
+#
+# Ie. within ``combos``, ``bind`` adds one configuration triple to all
+# configurations so far. ``options`` generates one configuration for each entry
+# in ``opts``.
+#
+# Is it a monad?
+
 def combos(*xs):
     if xs:
         return [x + combo for x in xs[0] for combo in combos(*xs[1:])]
@@ -49,6 +68,9 @@ def run_experiment(trials, name, mode='kube'):
 def cpus(n): return bind("num_cpu", n)
 def gpus(n): return bind("num_gpu", n)
 
+# Train an X using amplification and another one from ground truth data only.
+# amplification.train.train doesn't have an argument ``amplify``, though.
+# Let's hope that the argument ``supervised`` has the opposite effect.
 amplify_opts = options("train.amplify", [(True, "amp"), (False, "sup")])
 curriculum_opts = options("train.curriculum", [(True, "cy"), (False, "cn")])
 def sizes(*xs): return options("task.size", [(x, str(x)) for x in xs])

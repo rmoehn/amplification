@@ -233,6 +233,11 @@ def train(task, model, nbatch=50, num_steps=400000,
         stub=False, learn_human_model=True, supervised=False, curriculum=True,
         generation_frequency=10, log_frequency=10,
         buffer_size=10000, asker_data_limit=100000, loss_threshold=0.3, warmup_time=0):
+    """
+
+    ``stub`` == True means to pass a bunch of zeroes around and not actually do
+    anything. See :py:func:`run` in particular.
+    """
     if supervised: learn_human_model = False
     if not stub:
         placeholders = {
@@ -393,6 +398,12 @@ def train(task, model, nbatch=50, num_steps=400000,
 
     while True:
         time.sleep(10)
+        # The following doesn't work well when stub == True. – sess is not
+        # defined in that case. And the threads are non-daemon threads, so they
+        # don't terminate even when the parent thread terminates.
+        #
+        # Okay, so stub == True really means stub. Ie. apparently it doesn't
+        # train anything and just throws around dummy values.
         if stepper["answerer_train"] >= num_steps:
             if memory_usage:
                 with print_lock:
