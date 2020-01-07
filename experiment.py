@@ -1,4 +1,4 @@
-from amplification.run import main, parse_args
+from amplification.run import run, main, parse_args
 import argparse
 
 def combos(*xs):
@@ -29,21 +29,22 @@ def dict_of_dicts_assign(d, ks, v):
     d[k] = dict_of_dicts_assign(d.get(k, {}), ks[1:], v)
     return d
 
-def run_experiment(trials, name, dry_run=False):
+def run_experiment(trials, name, mode='kube'):
     for trial in trials:
         descriptors = []
         kwargs = {}
         for k, v, s in trial:
             if k is not None: kwargs[k] = v
             if s is not '': descriptors.append(s)
-        if dry_run:
+        if mode == 'dry':
             kwargs["train.stub"] = True
             for k in ["num_cpu", "num_gpu"]:
                 if k in kwargs:
                     del kwargs[k]
             main(**parse_args(kwargs))
         else:
-            raise NotImplementedError("this code path has been removed")
+            runner = {'kube': 'local': run}[mode]
+            runner("-".join([name] + descriptors), **parse_args(kwargs))
 
 def cpus(n): return bind("num_cpu", n)
 def gpus(n): return bind("num_gpu", n)
@@ -291,7 +292,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="run an experiment")
     parser.add_argument("-e", "--experiment")
     parser.add_argument("--dry", default=False, action='store_const', const=True)
+    parser.add_argument("--mode", default="kube", choices=['kube', 'dry', 'local'])
     parser.add_argument("-n", "--name")
     n = parser.parse_args()
     trials = globals()[n.experiment]
-    run_experiment(trials, n.name, dry_run=n.dry)
+    run_experiment(trials, n.name, mode='dry' if n.dry else n.mode)

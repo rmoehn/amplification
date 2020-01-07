@@ -54,6 +54,13 @@ def make_task(name="sum", tiny=False, **kwargs):
         raise ValueError(name)
 
 
+def run(name, f=main, **kwargs):
+    path = "/".join(name.split("-"))
+    if "train" not in kwargs: kwargs["train"] = {}
+    kwargs["train"]["path"] = "results/{}".format(path)
+    f(**kwargs)
+
+
 def dict_of_dicts_assign(d, ks, v):
     if len(ks) == 0:
         return v
