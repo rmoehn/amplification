@@ -314,6 +314,15 @@ equality = combos(
         repeat(2),
 )
 
+iterate_rm = combos(
+        bind("task.name", "iterate"),
+        bind("task.length", 1),
+        bind("task.log_iters", 2),
+        bind("train.supervised", False),
+        bind("train.num_steps", 10),
+        bind("model.tiny", True),
+)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="run an experiment")
     parser.add_argument("-e", "--experiment")
