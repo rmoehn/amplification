@@ -1,5 +1,9 @@
 from amplification.run import run, main, parse_args
 import argparse
+import logging
+
+# Credits: https://github.com/tensorflow/tensorflow/issues/27045#issue-424396145
+logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
 # The following description is incomplete.
 #
