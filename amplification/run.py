@@ -1,8 +1,14 @@
 import argparse
 from amplification import tasks
 
+def main(task=None, model=None, train=None, tiny=False):
+    if train is None:
+        train = {}
+    if model is None:
+        model = {}
+    if task is None:
+        task = {}
 
-def main(task={}, model={}, train={}, tiny=False):
     #import in here so that the runner doesn't import them
     if tiny:
         model['tiny'] = True

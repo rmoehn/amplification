@@ -64,7 +64,10 @@ class Context(object):
     def __setitem__(self, k, v):
         self.set(k, v)
 
-    def set(self, k, v, tags={}):
+    def set(self, k, v, tags=None):
+        if tags is None:
+            tags = {}
+
         tags = to_tags(tags)
         if isinstance(v, tf.Variable):
             tags["variable"] = tf.placeholder(dtype=v.dtype, shape=v.get_shape())
@@ -137,11 +140,14 @@ class Context(object):
                 result.tags[k] = tag_map(v, self.tags[k])
         return result
 
-    def variable(self, name, value, tags={}):
+    def variable(self, name, value, tags=None):
         """create a variable with a given name, value, and tags
 
         if this is frozen, instead retrieve an existing variable with the given name
         """
+        if tags is None:
+            tags = {}
+
         if name in self.d:
             return self.d[name]
         else:
@@ -629,7 +635,11 @@ def merge_heads(split_x, size, context=None, scale_weights=True):
 
 @register
 @contextual
-def multi_attention(q, k, v, nheads, context=None, attention_args={}, **kwargs):
+def multi_attention(q, k, v, nheads, context=None, attention_args=None,
+        **kwargs):
+    if attention_args is None:
+        attention_args = {}
+
     size = int(q.get_shape()[2])
     assert size % nheads == 0
     head_size = size // nheads
@@ -776,8 +786,11 @@ def drift_ops(context, epsilon):
 
 @contextual
 def minimize(loss, variables, optimizer_factory=tf.train.AdamOptimizer, context=None,
-        clip_grads=None, filter=None, optimizer_args={}, print_everything=False,
-        **kwargs):
+         clip_grads=None, filter=None, optimizer_args=None, print_everything=False,
+         **kwargs):
+    if optimizer_args is None:
+        optimizer_args = {}
+
     if filter is None:
         filter = lambda x, tags: "trainable" in tags
     var_list = variables.collect(filter=filter)

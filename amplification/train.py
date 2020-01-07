@@ -291,7 +291,10 @@ def train(task, model, nbatch=50, num_steps=400000,
                 def cleanup(): del fast_db_communicator[next_index]
         return result, cleanup
 
-    def run(op_names, batch={}, **kwargs):
+    def run(op_names, batch=None, **kwargs):
+        if batch is None:
+            batch = {}
+
         kwargs.update(batch)
         if not stub:
             to_run = [multi_access(ops, op_name) for op_name in op_names]

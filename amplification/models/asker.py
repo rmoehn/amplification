@@ -248,7 +248,14 @@ class AttentionSequenceModel(tf_utils.Model):
 
 
 class AskerAndAnswerer(tf_utils.Model):
-    def set_params(self, task, answerer={}, asker={}, joint={}):
+    def set_params(self, task, answerer=None, asker=None, joint=None):
+        if joint is None:
+            joint = {}
+        if asker is None:
+            asker = {}
+        if answerer is None:
+            answerer = {}
+
         answerer_args = {}
         asker_args = {}
         self.rounds = task.interaction_length

@@ -21,7 +21,10 @@ class Buffer:
     def keys(self):
         return list(self.buffer)
 
-    def extend(self, stuff, batch=True, extendible={}):
+    def extend(self, stuff, batch=True, extendible=None):
+        if extendible is None:
+            extendible = {}
+
         with self.lock:
             if not batch: stuff = {n: np.asarray([x]) for n, x in stuff.items()}
 
