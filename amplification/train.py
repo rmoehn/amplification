@@ -49,6 +49,8 @@ def get_interactions(run, task, facts, fast_dbs, Qs,
 
     if not use_real_questions:
         assert not use_real_answers
+        # Pass questions to Amplify^H'(X). "targets" are the answers to Qs
+        # according to H' after interacting with X.
         return  run(["targets", "subQs", "subAs"], facts=facts, Qs=Qs, fast_dbs=fast_dbs)
 
     if use_real_answers:
@@ -92,6 +94,8 @@ def log_accuracy(task, Qs, ground_truth, fast_dbs, stats_averager, stepper, **As
             print()
             print("{} accuracy: {}".format(name, repr_accuracy(correct, total)))
             stats_averager.add("accuracy/{}".format(name), correct/total)
+            # This gives the accuracy on the various classes. In the case of
+            # permutation powering, the classes are the powers.
             for c in sorted(counts.keys()):
                 print("  {}: {}".format(c, repr_accuracy(correct_counts[c], counts[c])))
                 stats_averager.add("accuracy_on/{}/{}".format(c, name), correct_counts[c]/counts[c])
@@ -100,13 +104,21 @@ def generate_answerer_data(run, task, get_batch, answerer_buffer, stats_averager
         use_real_questions=False, use_real_answers=False):
     averager = Averager()
     while True:
+        # Sample questions.
         facts, fast_dbs, Qs, ground_truth = get_batch()
         nqs = Qs.shape[1]
+        # What are As and teacher_As?
+        # ``As`` depends on the use_real_* parameters. But in the setting of
+        # CSASupAmp it's the answers Amplify^H'(X) gives.
         As, subQs, subAs = get_interactions(run, task, facts, fast_dbs, Qs,
                 use_real_answers=use_real_answers,
                 use_real_questions=use_real_questions)
+        # This must be the answers directly from X.
         teacher_As, = run(["answerer/teacher/As"],
                                      facts=facts, Qs=Qs, is_training=False)
+        # Calculates how close X is to Amplify^H'(X)?
+        # The fraction of batches where there are some actual answers (not all
+        # idk) and all of X's answers equal those of Amplify^H'(X).
         teacher_quality = np.mean(np.logical_and(
             np.any(teacher_As != idk, axis=-1),
             np.all(teacher_As == As, axis=-1)
@@ -169,6 +181,11 @@ def train_answerer(run, answerer_buffer, stats_averager, make_log, stepper, nbat
             accuracy = get_accuracy(As, batch["truth"])
             stats_averager.add("accuracy/validation", accuracy)
         if stepper["answerer_train"] % 10 == 0:
+            # This prints four main accuracies. As I understand them:
+            # /target is the accuracy of Amplify^H'(X).
+            # /teacher is the accuracy of X on root questions/answers.
+            # /train is the training accuracy of X on sub-questions/answers.
+            # /validation is the validation accuracy of X on sub-questions/answers.
             make_log()
 
 def generate_asker_data(run, task, get_batch, asker_buffer, stats_averager, stepper,

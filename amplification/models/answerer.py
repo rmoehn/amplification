@@ -35,6 +35,11 @@ class AnswererWithTarget(tf_utils.Model):
                    model_class=AttentionAnswerer,
                    learning_rate=1e-5,
                    **kwargs):
+        # The student gets trained on questions and outputs from Amplify^H'(X).
+        # The teacher is derived from a student by Polyak averaging and is used
+        # for answering sub-questions in both Amplify^H(X) and and
+        # Amplify^H'(X). So X is the student where it is being trained and the
+        # teacher when it is being used to answer sub-questions.
         self.student = model_class(context=self.context["student"], **kwargs)
         self.teacher = model_class(context=self.context["teacher"], **kwargs)
         self.learning_rate = learning_rate
@@ -50,6 +55,7 @@ class AnswererWithTarget(tf_utils.Model):
 
     def update_ema_op(self):
         context = self.context["ema"]
+        # This must be the Polyak averaging mentioned in CSASupAmp.
         maintain_ema_ops = tf_utils.moving_averages(
             self.context["student"].map(
                 filter=lambda x, t: "trainable" in t or "stats" in t),
