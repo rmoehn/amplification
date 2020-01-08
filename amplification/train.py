@@ -377,6 +377,10 @@ def train(task, model, nbatch=50, num_steps=400000,
         ops = model.build(**placeholders, simple_answerer=answer_if_simple_tf)
         config = tf.ConfigProto()
         config.allow_soft_placement = True
+        # Credits: https://software.intel.com/en-us/articles/maximize-tensorflow-performance-on-cpu-considerations-and-recommendations-for-inference
+        if not tf.test.is_gpu_available():
+            config.inter_op_parallelism_threads = 4
+            config.intra_op_parallelism_threads = 6
 
         if tf.test.is_gpu_available():
             with tf.device('/gpu:0'):
