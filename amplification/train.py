@@ -1,5 +1,6 @@
 import time
 import threading
+from typing import Sequence
 import sys
 import itertools
 from collections import defaultdict
@@ -8,7 +9,7 @@ import tensorflow as tf
 import numpy as np
 
 import amplification.models as models
-from amplification.tasks.core import idk, print_interaction, recursive_run
+from amplification.tasks.core import idk, print_interaction, recursive_run, Task
 from amplification.buffer import Buffer
 from amplification.logger import Logger
 
@@ -51,6 +52,8 @@ def get_interactions(run, task, facts, fast_dbs, Qs,
         assert not use_real_answers
         # Pass questions to Amplify^H'(X). "targets" are the answers to Qs
         # according to H' after interacting with X.
+        # Does this also run the whole interaction between H' and X? Yes, I
+        # think so, based on asker.py. But as an unrolled loop.
         return  run(["targets", "subQs", "subAs"], facts=facts, Qs=Qs, fast_dbs=fast_dbs)
 
     if use_real_answers:
@@ -100,8 +103,14 @@ def log_accuracy(task, Qs, ground_truth, fast_dbs, stats_averager, stepper, **As
                 print("  {}: {}".format(c, repr_accuracy(correct_counts[c], counts[c])))
                 stats_averager.add("accuracy_on/{}/{}".format(c, name), correct_counts[c]/counts[c])
 
+def inject_errors(task: Task, As_batches: Sequence, fast_dbs, probability: float):
+    if probability == 0.0:
+        return
+    for As, fast_db in zip(As_batches, fast_dbs):
+        task.inject_errors(As, fast_db, probability)
+
 def generate_answerer_data(run, task, get_batch, answerer_buffer, stats_averager, stepper,
-        use_real_questions=False, use_real_answers=False):
+        use_real_questions=False, use_real_answers=False, error_probability=0.0):
     averager = Averager()
     while True:
         # Sample questions.
@@ -113,6 +122,7 @@ def generate_answerer_data(run, task, get_batch, answerer_buffer, stats_averager
         As, subQs, subAs = get_interactions(run, task, facts, fast_dbs, Qs,
                 use_real_answers=use_real_answers,
                 use_real_questions=use_real_questions)
+        inject_errors(task, As, fast_dbs, error_probability)
         # This must be the answers directly from X.
         teacher_As, = run(["answerer/teacher/As"],
                                      facts=facts, Qs=Qs, is_training=False)
@@ -249,7 +259,8 @@ def train(task, model, nbatch=50, num_steps=400000,
         path=None,
         stub=False, learn_human_model=True, supervised=False, curriculum=True,
         generation_frequency=10, log_frequency=10,
-        buffer_size=10000, asker_data_limit=100000, loss_threshold=0.3, warmup_time=0):
+        buffer_size=10000, asker_data_limit=100000, loss_threshold=0.3,
+        warmup_time=0, error_probability=0.0):
     """
 
     ``stub`` == True means to pass a bunch of zeroes around and not actually do
@@ -406,7 +417,8 @@ def train(task, model, nbatch=50, num_steps=400000,
         dict(target=generate_answerer_data,
              args=(run, task, get_batch, answerer_buffer, stats_averager, stepper),
              kwargs=dict(use_real_questions=not learn_human_model,
-                         use_real_answers=supervised)),
+                         use_real_answers=supervised,
+                         error_probability=error_probability)),
         dict(target=generate_asker_data,
              args=(run, task, get_batch, asker_buffer, stats_averager, stepper)),
     ]

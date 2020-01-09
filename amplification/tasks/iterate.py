@@ -175,6 +175,14 @@ class IterTask(Task):
         else:
             return self.pad(idk)
 
+    # Note: It might be possible to make this generic.
+    def inject_errors(self, As: np.ndarray, fast_db, probability):
+        error_spots = np.random.choice([True, False],
+                                       p=[probability, 1 - probability],
+                                       size=As.shape[0])
+        errors = random.choices(fast_db["vars"] + [self.pad(idk)], k=As.shape[0])
+        np.copyto(As, errors, where=error_spots[:, np.newaxis])
+
     def all_questions(self, fast_db):
         for x in fast_db["vars"]:
             for n in sequences([self.zero, self.one], self.log_iters):

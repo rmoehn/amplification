@@ -146,6 +146,13 @@ class Task():
         except RecursionError:  #happens if we don't implement one of answer or answers
             raise NotImplementedError
 
+    # Note: When you implement this, have a look at
+    # IterTask.inject_random_answers. It might be possible to make that one
+    # generic, so that it works for all Tasks. Or at least for all Tasks that
+    # implement some simple API.
+    def inject_errors(self, As, fast_db, probability):
+        raise NotImplementedError()
+
 
 def test_task(task, nbatch=10, nqs=300):
     import time

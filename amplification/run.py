@@ -90,6 +90,7 @@ def main_cmd():
             'train.asker_data_limit', 'train.adjust_drift_epsilon',
             'train.initial_drift_epsilon', 'train.stub', 'train.just_asker',
             'train.supervised', 'train.learn_human_model', 'train.warmup_time',
+            'train.error_probability',
             'model.joint.depth', 'model.answerer.depth',
             'model.answerer.answer_depth', 'model.asker.depth',
             'model.joint.nh', 'model.asker.nh', 'model.answerer.nh',
