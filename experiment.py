@@ -171,7 +171,7 @@ jan15_final = combos(
     ),
 )
 jan15_variants = combos(
-    tasks('iter', 'sum', 'graph'), 
+    tasks('iter', 'sum', 'graph'),
     sizes(64),
     each(
         bind('train.loss_threshold', 0.1, "cautious"),
@@ -321,6 +321,11 @@ iterate_rm = combos(
         bind("train.supervised", False),
         bind("train.num_steps", 10),
         bind("model.tiny", True),
+)
+
+iterate_fail = combos(
+        iterate_rm,
+        bind("train.error_probability", 0.1),
 )
 
 if __name__ == "__main__":
