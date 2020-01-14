@@ -1,6 +1,7 @@
 import argparse
 from datetime import datetime
 import os
+import pprint
 
 from amplification import tasks
 
@@ -59,9 +60,13 @@ def make_task(name="sum", tiny=False, **kwargs):
 
 def run(name, f=main, **kwargs):
     path = os.path.join(*name.split("-"))
-    if "train" not in kwargs: kwargs["train"] = {}
     log_path = os.path.join("results", path, datetime.now().strftime("%m%d-%H%M%S"))
     os.makedirs(log_path, exist_ok=True)
+
+    with open(os.path.join(log_path, "params.pydata"), 'w') as fo:
+        pprint.pprint(kwargs, fo)
+
+    if "train" not in kwargs: kwargs["train"] = {}
     kwargs["train"]["path"] = log_path
 
     f(**kwargs)
