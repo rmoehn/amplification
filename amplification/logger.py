@@ -20,18 +20,20 @@ class Logger(object):
         else:
             return v
 
-    def __init__(self, log_fields=None, log_path=None):
+    def __init__(self, log_fields=None, log_path=None, step_field=None):
         self.log_fields = log_fields
+        self.log_path = log_path
+        self.step_field = step_field
         self.writer = None
         if log_path is not None:
-            self.step = 1
+            self.fallback_step = 1
             prefix = 'events'
             path = os.path.join(os.path.abspath(log_path), prefix)
             print("events_path: ", path)
             ensure_dir(path)
             self.writer = pywrap_tensorflow.EventsWriter(compat.as_bytes(path))
 
-    def writekvs(self, kvs):
+    def writekvs(self, kvs, step):
         if self.writer is not None:
 
             def summary_val(k, v):
@@ -43,10 +45,10 @@ class Logger(object):
                 if isinstance(v, float) or isinstance(v, int)
             ])
             event = event_pb2.Event(wall_time=time.time(), summary=summary)
-            event.step = self.step  # is there any reason why you'd want to specify the step?
+            event.step = step  # is there any reason why you'd want to specify the step?
+            # Yes, the step is shown in TensorBoard.
             self.writer.WriteEvent(event)
             self.writer.Flush()
-            self.step += 1
 
     def log(self, variables):
         if self.log_fields is not None:
@@ -56,7 +58,10 @@ class Logger(object):
             pairs = variables.items()
         pairs = sorted([(k, self.convert_np_to_py(v)) for k, v in pairs])
         max_len = max([len(k) for k, v in pairs])
-        self.writekvs(pairs)
+        step = int(variables[self.step_field]) if self.step_field else self.fallback_step
+        # KeyError intended when step_field given, but not available in variables.
+        self.writekvs(pairs, step=step)
+        self.fallback_step += 1
         print()
         print('=' * 40)
         #print('%s : %s'%('name'.ljust(max_len), self.name))

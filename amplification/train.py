@@ -369,7 +369,7 @@ def train(task, model, nbatch=50, num_steps=400000,
     get_batch.difficulty = 0 if curriculum else float('inf')
 
     start_time = time.time()
-    logger = Logger(log_path=path)
+    logger = Logger(log_path=path, step_field="step/answerer_train")
     def make_log():
         log = {}
         log["time"] = time.time() - start_time
