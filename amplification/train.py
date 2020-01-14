@@ -196,6 +196,9 @@ def train_answerer(run, answerer_buffer, stats_averager, make_log, stepper, nbat
             # /teacher is the accuracy of X on root questions/answers.
             # /train is the training accuracy of X on sub-questions/answers.
             # /validation is the validation accuracy of X on sub-questions/answers.
+            # The latter two descriptions are probably false. They're also
+            # accuracies on root questions/answers. But then why are they higher
+            # than /teacher?
             make_log()
 
 def generate_asker_data(run, task, get_batch, asker_buffer, stats_averager, stepper,
@@ -366,6 +369,8 @@ def train(task, model, nbatch=50, num_steps=400000,
 
     def get_batch(nbatch=nbatch):
         return task.get_batch(nbatch, difficulty=get_batch.difficulty)
+    # Yes, you can set arbitrary attributes on a procedure. No, this is not a
+    # good idea in most cases, I suspect.
     get_batch.difficulty = 0 if curriculum else float('inf')
 
     start_time = time.time()

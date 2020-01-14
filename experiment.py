@@ -10,8 +10,9 @@ logging.getLogger("tensorflow").setLevel(logging.ERROR)
 # An experiment consists of a list of configurations.
 #
 # A configuration is a tuple of triples. A triple consists of
-# (configuration key, configuration value, descriptor). The descriptor gives
-# this part of the configuration a speaking name within an experiment.
+# (configuration key, configuration value, descriptor). The descriptors are
+# appended to the name of the experiment. This then in turn used to create a
+# path in the log directory.
 #
 # ``combos`` generates an experiment. It returns configurations based on the
 # cartesian product of all the ``options`` among its arguments and adds to each
