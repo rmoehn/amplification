@@ -1,4 +1,7 @@
 import argparse
+from datetime import datetime
+import os
+
 from amplification import tasks
 
 def main(task=None, model=None, train=None, tiny=False):
@@ -55,9 +58,12 @@ def make_task(name="sum", tiny=False, **kwargs):
 
 
 def run(name, f=main, **kwargs):
-    path = "/".join(name.split("-"))
+    path = os.path.join(*name.split("-"))
     if "train" not in kwargs: kwargs["train"] = {}
-    kwargs["train"]["path"] = "results/{}".format(path)
+    log_path = os.path.join("results", path, datetime.now().strftime("%m%d-%H%M%S"))
+    os.makedirs(log_path, exist_ok=True)
+    kwargs["train"]["path"] = log_path
+
     f(**kwargs)
 
 
