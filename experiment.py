@@ -317,8 +317,9 @@ equality = combos(
 
 iterate_rm = combos(
         bind("task.name", "iterate"),
+        bind("task.nchars", 4),
         bind("task.length", 1),
-        bind("task.log_iters", 2),
+        bind("task.log_iters", 3),
         bind("train.supervised", False),
         bind("train.num_steps", 10),
         bind("model.tiny", True),
