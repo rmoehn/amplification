@@ -1,6 +1,7 @@
 import os
 import tensorflow as tf
 import numpy as np
+
 from tensorflow.python import pywrap_tensorflow
 from tensorflow.python.util import compat
 from tensorflow.core.util import event_pb2
