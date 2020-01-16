@@ -17,6 +17,7 @@ from tensorflow.contrib.memory_stats.python.ops.memory_stats_ops import BytesInU
 
 print_lock = threading.Lock()
 
+# Like Clojure's get-in with /-separated paths.
 def multi_access(d, ks):
     for k in ks.split("/"):
         d = d[k]
@@ -349,6 +350,8 @@ def train(task, model, nbatch=50, num_steps=400000,
 
         kwargs.update(batch)
         if not stub:
+            # ops is defined later. Apparently in Python a closure has access to
+            # lexical variables that are defined after the closure.
             to_run = [multi_access(ops, op_name) for op_name in op_names]
             feed_dict, cleanup = make_feed(kwargs)
             try:
@@ -383,6 +386,9 @@ def train(task, model, nbatch=50, num_steps=400000,
             }
             return [multi_access(stub_impl, op_name)(kwargs) for op_name in op_names]
 
+    # The generator and training threads generate stats at every step. (Which I
+    # suspect is bad for performance.) The stats_averager averages them until
+    # they're logged every tenth step.
     stats_averager = Averager()
 
     def get_batch(nbatch=nbatch):

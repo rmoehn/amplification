@@ -68,6 +68,7 @@ class AttentionSequenceModel(tf_utils.Model):
         return tf_utils.dropout(
             result, p_drop=self.p_drop, do_dropout=is_training)
 
+    # ys appear to be the encoded ws.
     def run(self,
             ws,
             token_types,
@@ -82,6 +83,7 @@ class AttentionSequenceModel(tf_utils.Model):
                 axis=1)  #prepend ? as a start token
             token_types = tf.concat(
                 [ints((nbatch, 1), TokenTypes.mainQ), token_types], axis=1)
+        # Start after the prev_ys.
         start_position = tf.constant(0) if prev_ys is None else tf.shape(
             prev_ys[0])[1]
         inputs = self.encode(
@@ -286,6 +288,7 @@ class AskerAndAnswerer(tf_utils.Model):
         return tf.device("/device:GPU:0" if tf.test.is_gpu_available()
                          else "/device:CPU:0")
 
+    # In order to understand token_types, have a look at make_transcript.
     def build(self, facts, Qs, targets, transcripts, token_types, is_training,
               simple_answerer):
         answerer_ops = self.answerer.build(
