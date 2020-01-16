@@ -228,23 +228,36 @@ class AttentionSequenceModel(tf_utils.Model):
 
     def build(self, ws, token_types, is_training=tf.constant(True)):
         logits, _, _ = self.run(ws, token_types, is_training=is_training)
-        losses = tf.nn.sparse_softmax_cross_entropy_with_logits(
-            logits=logits, labels=ws)
-        is_question = tf.cast(
-            tf.equal(token_types, TokenTypes.subQ), dtype=tf.float32)
-        is_answer = tf.cast(
-            tf.equal(token_types, TokenTypes.mainA), dtype=tf.float32)
-        Q_loss = tf.reduce_sum(
-            losses * is_question) / tf.reduce_sum(is_question)
-        A_loss = tf.reduce_sum(losses * is_answer) / tf.reduce_sum(is_answer)
-        loss = 0.5 * (Q_loss + A_loss)
+
+        with tf.name_scope("asker/loss"):
+            losses = tf.nn.sparse_softmax_cross_entropy_with_logits(
+                logits=logits, labels=ws)
+            # The transcripts is "mainQ (subQ subA)+ mainA". Score the asker
+            # only by its outputs, namely the subQs and mainA.
+            is_question = tf.equal(token_types, TokenTypes.subQ, name="is_question")
+            is_answer = tf.equal(token_types, TokenTypes.mainA, name="is_answer")
+            Q_loss = tf.reduce_mean(tf.boolean_mask(losses, is_question))
+            A_loss = tf.reduce_mean(tf.boolean_mask(losses, is_answer))
+            loss = 0.5 * (Q_loss + A_loss)
+
         train_op = tf_utils.minimize(
             loss,
             self.context,
             clip_grads=1.0,
             context=self.context["train"],
             optimizer_args=dict(learning_rate=self.learning_rate, beta2=0.98))
-        return {"losses": losses, "loss": loss, "train": train_op}
+
+        with tf.name_scope("asker/accuracy"):
+            predictions = tf.arg_max(
+                logits, dimension=-1, output_type=tf.int32, name="predictions")
+            diff = tf.cast(tf.equal(predictions, ws), dtype=tf.float32, name="diff")
+            Q_accuracy = tf.reduce_mean(
+                tf.boolean_mask(diff, is_question), name="q_accuracy")
+            A_accuracy = tf.reduce_mean(
+                tf.boolean_mask(diff, is_answer), name="a_accuracy")
+
+        return {"losses": losses, "loss": loss, "train": train_op,
+                "q_accuracy": Q_accuracy, "a_accuracy": A_accuracy}
 
 
 class AskerAndAnswerer(tf_utils.Model):

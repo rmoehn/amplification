@@ -253,9 +253,25 @@ def train_asker(run, asker_buffer, stats_averager, stepper, nbatch):
         if stepper["asker_train"] > stepper["answerer_train"] + 10000:
             time.sleep(0.1)
         else:
+            fetch2metric = {
+                "asker/loss": "loss/asker",
+                "asker/q_accuracy": "accuracy/asker/q/train",
+                "asker/a_accuracy": "accuracy/asker/a/train",
+            }
+            fetches = ["asker/train", "asker/loss"]
+            # Unlike the other train_*/generate_* methods, this calculates the
+            # accuracy only every fifty steps. This means this stat won't always
+            # be logged, because the averager values are logged and reset every
+            # ten steps.
+            if stepper["asker_train"] % 50 == 0:
+                fetches += ["asker/q_accuracy", "asker/a_accuracy"]
             batch = asker_buffer.sample(nbatch)
-            _, loss = run(["asker/train", "asker/loss"], batch, is_training=True)
-            stats_averager.add("loss/asker", loss)
+            results = run(fetches, batch, is_training=True)
+
+            for fetch, result in zip(fetches, results):
+                if fetch in fetch2metric:
+                    stats_averager.add(fetch2metric[fetch], result)
+
             stepper["asker_train"] += 1
 
 def train(task, model, nbatch=50, num_steps=400000,
@@ -349,6 +365,7 @@ def train(task, model, nbatch=50, num_steps=400000,
                 return np.zeros(batch["Qs"].shape[:2] +
                             (task.interaction_length, task.answer_length), dtype=np.int32)
             def loss(batch): return 0.17
+            def accuracy(batch): return 0.85
             def train(batch): return None
 
             stub_impl = {
@@ -361,7 +378,8 @@ def train(task, model, nbatch=50, num_steps=400000,
                     "teacher":{"As":As, "train":train, "loss":loss},
                     "student":{"As":As, "train":train, "loss":loss}
                 },
-                "asker":{"train":train, "loss":loss}
+                "asker":{"train":train, "loss":loss, "q_accuracy": accuracy,
+                         "a_accuracy": accuracy}
             }
             return [multi_access(stub_impl, op_name)(kwargs) for op_name in op_names]
 
