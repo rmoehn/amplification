@@ -45,6 +45,9 @@ class Averager():
                 self.sum[c] *= (1 - 1/horizon)
             self.n[c] += 1
             self.sum[c] += x
+    def add_all(self, d, horizon=None):
+        for c, x in d.items():
+            self.add(c, x, horizon)
     def items(self):
         for c in self.n: yield (c, self.get(c))
     def get(self, c):
