@@ -251,12 +251,27 @@ def generate_asker_data(run, task, get_batch, asker_buffer, stats_averager, step
                                                                    As[batchn, qn])
                 all_transcripts.append(transcripts)
                 all_tokens.append(tokens)
+            # transcripts ends up being the ws argument to asker.build
+            # (AttentionSequenceModel.build) via the placeholders dictionary in
+            # ``train``.
             batch = {"transcripts":np.array(all_transcripts),
                      "token_types":np.array(all_tokens)}
             asker_buffer.extend(batch)
-            new_loss, = run(["asker/loss"], batch, is_training=False)
-            averager.add("loss", new_loss, 3000 * rate/nbatch)
+
+            metric2fetch = {"loss/asker/validation": "asker/loss"}
+            # See the comment on similar code in train_asker.
+            if (stepper["asker_gen"] // nbatch) % 50 == 0:
+                metric2fetch = {**metric2fetch,
+                                "accuracy/asker/q/validation": "asker/q_accuracy",
+                                "accuracy/asker/a/validation": "asker/a_accuracy",}
+            metric2result = run(metric2fetch, batch, is_training=False)
+            averager.add("loss", metric2result["loss/asker/validation"], 3000 * rate/nbatch)
             stats_averager.add("loss/asker/validation", averager.get("loss"))
+
+            # Add the metrics that haven't been added yet.
+            del metric2result["loss/asker/validation"]
+            stats_averager.add_all(metric2result)
+
             stepper["asker_gen"] += nbatch
 
 def train_asker(run, asker_buffer, stats_averager, stepper, nbatch):
