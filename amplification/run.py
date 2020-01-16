@@ -3,7 +3,30 @@ from datetime import datetime
 import os
 import pprint
 
+from sh.contrib import git
+
 from amplification import tasks
+
+
+# If you find yourself writing more procedures like this, I recommend you make
+# an abstraction.
+def git_rev_parse(rev: str) -> str:
+    return str(git("rev-parse", rev)).rstrip()
+
+
+# This procedure assumes that the code is run from within a Git repo. When you
+# want to run it from somewhere else, adapt either this procedure or the callers.
+def snapshot_code(tag: str) -> (str, str):
+    parent_oid = git_rev_parse("HEAD")  # oid … Git object ID, aka SHA
+
+    git.add("--update")
+    git.commit("-m", "Snapshot for experiment run")
+    git.tag(tag)
+    snapshot_oid = git_rev_parse("HEAD")
+    git.reset("HEAD^")
+
+    return parent_oid, snapshot_oid
+
 
 def main(task=None, model=None, train=None, tiny=False):
     if train is None:
@@ -63,8 +86,13 @@ def run(name, f=main, **kwargs):
     log_path = os.path.join("results", path, datetime.now().strftime("%m%d-%H%M%S"))
     os.makedirs(log_path, exist_ok=True)
 
-    with open(os.path.join(log_path, "params.pydata"), 'w') as fo:
-        pprint.pprint(kwargs, fo)
+    # Save this run's configuration along with the hard-coded hyperparameters.
+    parent_oid, snapshot_oid = snapshot_code(tag=os.path.join("exp", log_path))
+    with open(os.path.join(log_path, "expinfo.pydata"), 'w') as fo:
+        pprint.pprint({"params": kwargs,
+                       "code": {"parent_oid": parent_oid,
+                                "snapshot_oid": snapshot_oid}},
+                      fo)
 
     if "train" not in kwargs: kwargs["train"] = {}
     kwargs["train"]["path"] = log_path
