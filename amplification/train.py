@@ -266,24 +266,20 @@ def train_asker(run, asker_buffer, stats_averager, stepper, nbatch):
         if stepper["asker_train"] > stepper["answerer_train"] + 10000:
             time.sleep(0.1)
         else:
-            fetch2metric = {
-                "asker/loss": "loss/asker",
-                "asker/q_accuracy": "accuracy/asker/q/train",
-                "asker/a_accuracy": "accuracy/asker/a/train",
-            }
-            fetches = ["asker/train", "asker/loss"]
+            metric2fetch = {"loss/asker": "asker/loss"}
             # Unlike the other train_*/generate_* methods, this calculates the
             # accuracy only every fifty steps. This means this stat won't always
             # be logged, because the averager values are logged and reset every
             # ten steps.
             if stepper["asker_train"] % 50 == 0:
-                fetches += ["asker/q_accuracy", "asker/a_accuracy"]
+                metric2fetch = {**metric2fetch,
+                                "accuracy/asker/q/train": "asker/q_accuracy",
+                                "accuracy/asker/a/train": "asker/a_accuracy",}
+            fetches = ["asker/train", metric2fetch]
             batch = asker_buffer.sample(nbatch)
-            results = run(fetches, batch, is_training=True)
 
-            for fetch, result in zip(fetches, results):
-                if fetch in fetch2metric:
-                    stats_averager.add(fetch2metric[fetch], result)
+            _, metric2result = run(fetches, batch, is_training=True)
+            stats_averager.add_all(metric2result)
 
             stepper["asker_train"] += 1
 
