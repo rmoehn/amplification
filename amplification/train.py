@@ -358,7 +358,7 @@ def train(task, model, nbatch=50, num_steps=400000,
                 return sess.run(to_run, feed_dict)
             finally:
                 cleanup()
-        if stub:
+        else:
             def As(batch):
                 return np.zeros(batch["Qs"].shape[:2] + (task.answer_length,), dtype=np.int32)
             def subQs(batch):
