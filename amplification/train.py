@@ -17,6 +17,15 @@ from tensorflow.contrib.memory_stats.python.ops.memory_stats_ops import BytesInU
 
 print_lock = threading.Lock()
 
+# Credits: https://stackoverflow.com/a/48304328/5091738
+def recursive_map(f, o):
+    if isinstance(o, dict):
+        return {k: recursive_map(f, v) for k, v in o.items()}
+    elif isinstance(o, list):
+        return [recursive_map(f, x) for x in o]
+    else:
+        return f(o)
+
 # Like Clojure's get-in with /-separated paths.
 def multi_access(d, ks):
     for k in ks.split("/"):
@@ -344,7 +353,7 @@ def train(task, model, nbatch=50, num_steps=400000,
                 def cleanup(): del fast_db_communicator[next_index]
         return result, cleanup
 
-    def run(op_names, batch=None, **kwargs):
+    def run(fetch_names, batch=None, **kwargs):
         if batch is None:
             batch = {}
 
@@ -352,10 +361,11 @@ def train(task, model, nbatch=50, num_steps=400000,
         if not stub:
             # ops is defined later. Apparently in Python a closure has access to
             # lexical variables that are defined after the closure.
-            to_run = [multi_access(ops, op_name) for op_name in op_names]
+            fetches = recursive_map(lambda fetch_name: multi_access(ops, fetch_name),
+                                    fetch_names)
             feed_dict, cleanup = make_feed(kwargs)
             try:
-                return sess.run(to_run, feed_dict)
+                return sess.run(fetches, feed_dict)
             finally:
                 cleanup()
         else:
@@ -384,7 +394,9 @@ def train(task, model, nbatch=50, num_steps=400000,
                 "asker":{"train":train, "loss":loss, "q_accuracy": accuracy,
                          "a_accuracy": accuracy}
             }
-            return [multi_access(stub_impl, op_name)(kwargs) for op_name in op_names]
+            return recursive_map(
+                lambda fetch_name: multi_access(stub_impl, fetch_name)(kwargs),
+                fetch_names)
 
     # The generator and training threads generate stats at every step. (Which I
     # suspect is bad for performance.) The stats_averager averages them until
