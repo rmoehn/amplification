@@ -1,6 +1,7 @@
 from amplification.run import run, main, parse_args
 import argparse
 import logging
+import multiprocessing
 
 # Credits: https://github.com/tensorflow/tensorflow/issues/27045#issue-424396145
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
@@ -53,22 +54,36 @@ def dict_of_dicts_assign(d, ks, v):
     d[k] = dict_of_dicts_assign(d.get(k, {}), ks[1:], v)
     return d
 
+# If you have time, don't add conditions to the if-elif. Rather, make a dispatch
+# dictionary.
 def run_experiment(trials, name, mode='kube'):
     for trial in trials:
         descriptors = []
-        kwargs = {}
+        raw_kwargs = {}
         for k, v, s in trial:
-            if k is not None: kwargs[k] = v
+            if k is not None: raw_kwargs[k] = v
             if s is not '': descriptors.append(s)
+        exp_name = "-".join([name] + descriptors)
+        kwargs = parse_args(raw_kwargs)
         if mode == 'dry':
-            kwargs["train.stub"] = True
+            kwargs["train"]["stub"] = True
             for k in ["num_cpu", "num_gpu"]:
                 if k in kwargs:
                     del kwargs[k]
-            main(**parse_args(kwargs))
+            main(**kwargs)
+        elif mode == 'kube':
+            raise NotImplementedError("this code path has been removed")
+        elif mode == 'local' and len(trials) == 1:
+            run(exp_name, kwargs)
+        elif mode == 'local' and len(trials) > 1:
+            # Run each trial in a new process, so it doesn't get confused with
+            # global state from the previous trial.
+            p = multiprocessing.Process(target=run, args=(exp_name,), kwargs=kwargs)
+            p.start()
+            p.join()
         else:
-            runner = {'kube': 'local': run}[mode]
-            runner("-".join([name] + descriptors), **parse_args(kwargs))
+            raise AssertionError("Didn't expect to reach this.")
+
 
 def cpus(n): return bind("num_cpu", n)
 def gpus(n): return bind("num_gpu", n)
