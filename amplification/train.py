@@ -111,7 +111,8 @@ def log_accuracy(task, Qs, ground_truth, fast_dbs, stats_averager, stepper, **As
             print("{} accuracy: {}".format(name, repr_accuracy(correct, total)))
             stats_averager.add("accuracy/{}".format(name), correct/total)
             # This gives the accuracy on the various classes. In the case of
-            # permutation powering, the classes are the powers.
+            # permutation powering, the classes are the magnitudes of the
+            # powers. Eg. 2/0010 → class 2, 5/0101 → 3, 15/1111 → 4
             for c in sorted(counts.keys()):
                 print("  {}: {}".format(c, repr_accuracy(correct_counts[c], counts[c])))
                 stats_averager.add("accuracy_on/{}/{}".format(c, name), correct_counts[c]/counts[c])
@@ -205,13 +206,12 @@ def train_answerer(run, answerer_buffer, stats_averager, make_log, stepper, nbat
             stats_averager.add("accuracy/validation", accuracy)
         if stepper["answerer_train"] % 10 == 0:
             # This prints four main accuracies. As I understand them:
-            # /target is the accuracy of Amplify^H'(X).
-            # /teacher is the accuracy of X on root questions/answers.
-            # /train is the training accuracy of X on sub-questions/answers.
-            # /validation is the validation accuracy of X on sub-questions/answers.
-            # The latter two descriptions are probably false. They're also
-            # accuracies on root questions/answers. But then why are they higher
-            # than /teacher?
+            # /target is the accuracy of Amplify^H'(Xpa).
+            # /teacher is the accuracy of Xpa on root questions/answers.
+            # /train is the training accuracy of X on root questions/answers.
+            # /validation is the validation accuracy of X on root questions/answers.
+            # Xpa is derived from X by Polyak averaging (see CSASupAmp, p. 14),
+            # which must be why /teacher lags behind /train.
             make_log()
 
 def generate_asker_data(run, task, get_batch, asker_buffer, stats_averager, stepper,
