@@ -345,6 +345,28 @@ iterate_fail = combos(
         bind("train.error_probability", 0.1),
 )
 
+iterate_v1_proto = combos(
+        bind("task.name", "iterate"),
+        bind("task.nchars", 4),
+        bind("task.length", 1),
+        bind("task.log_iters", 3),
+        bind("train.supervised", False),
+        bind("train.num_steps", 4000),
+        bind("model.tiny", True),
+        repeat(3),
+)
+
+iterate_v1 = combos(
+        iterate_v1_proto,
+        repeat(3),
+)
+
+iterate_fail_v1 = combos(
+        iterate_v1_proto,
+        options("train.error_probability", [(p, str(p)) for p in [0.01, 0.1, 0.3, 1.0]]),
+        repeat(3),
+)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="run an experiment")
     parser.add_argument("-e", "--experiment")
