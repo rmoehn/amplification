@@ -19,8 +19,9 @@ def git_rev_parse(rev: str) -> str:
 def snapshot_code(tag: str) -> (str, str):
     parent_oid = git_rev_parse("HEAD")  # oid … Git object ID, aka SHA
 
-    git.add("--update")
-    git.commit("-m", "Snapshot for experiment run")
+    if git.diff("--quiet", _ok_code=[0, 1]).exit_code == 1:
+        git.add("--update")
+        git.commit("-m", "Snapshot for experiment run")
     git.tag(tag)
     snapshot_oid = git_rev_parse("HEAD")
     git.reset("HEAD^")

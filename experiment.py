@@ -74,7 +74,7 @@ def run_experiment(trials, name, mode='kube'):
         elif mode == 'kube':
             raise NotImplementedError("this code path has been removed")
         elif mode == 'local' and len(trials) == 1:
-            run(exp_name, kwargs)
+            run(exp_name, **kwargs)
         elif mode == 'local' and len(trials) > 1:
             # Run each trial in a new process, so it doesn't get confused with
             # global state from the previous trial.
