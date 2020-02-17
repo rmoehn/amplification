@@ -68,6 +68,7 @@ main_layout = [
             {"type": "multiline", "patterns": [r"accuracy/teacher"]},
             {"type": "multiline", "patterns": [r"accuracy_on/[23]/targets"]},
             {"type": "multiline", "patterns": [r"accuracy_on/[23]/teacher"]},
+            {"type": "multiline", "patterns": [r"accuracy_on/2/(targets|teacher)"]},
         ],
     },
     {
