@@ -68,8 +68,8 @@ View results in TensorBoard
     ```
 
 
-Useful changes to the original code
------------------------------------
+Rough changelog, compared to the original code
+----------------------------------------------
 
 - William added a SAT task and the option to use a Universal Transformer instead
   of a Transformer. Plus some other things. Just look at the first commits in
